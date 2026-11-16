@@ -1,4 +1,12 @@
-## Unreleased
+## 2.55.1 (November 16, 2026)
+
+### Notes
+
+* The provider is now published as `BigDutch15/bitbucket` from [BigDutch15/terraform-provider-bitbucket](https://github.com/BigDutch15/terraform-provider-bitbucket). The code is the same as `DrFaust92/bitbucket` v2.55.0. To switch, change `source` to `BigDutch15/bitbucket` in `required_providers`, then run `terraform state replace-provider DrFaust92/bitbucket BigDutch15/bitbucket` and `terraform init`.
+
+## 2.55.0 (DrFaust92/bitbucket)
+
+Releases 1.3.0 through 2.55.0 were published by [DrFaust92/terraform-provider-bitbucket](https://github.com/DrFaust92/terraform-provider-bitbucket/releases); see its release notes for those changes.
 
 ### Bug fixes
 
