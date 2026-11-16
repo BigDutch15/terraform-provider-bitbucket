@@ -20,7 +20,7 @@ Clone repository to: `$GOPATH/src/github.com/terraform-providers/terraform-provi
 
 ```sh
 $ mkdir -p $GOPATH/src/github.com/terraform-providers; cd $GOPATH/src/github.com/terraform-providers
-$ git clone git@github.com:terraform-providers/terraform-provider-bitbucket
+$ git clone git@github.com:BigDutch15/terraform-provider-bitbucket
 ```
 
 Enter the provider directory and build the provider
@@ -37,7 +37,7 @@ Using the provider
 terraform {
   required_providers {
     bitbucket = {
-      source  = "DrFaust92/bitbucket"
+      source  = "BigDutch15/bitbucket"
       version = "version-here"
     }
   }
