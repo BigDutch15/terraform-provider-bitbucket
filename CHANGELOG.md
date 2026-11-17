@@ -1,3 +1,9 @@
+## 2.56.0 (Unreleased)
+
+### Features
+
+* `bitbucket_branch_restriction`: support the `require_all_comments_resolved` kind ([#5](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/5))
+
 ## 2.55.1 (November 16, 2026)
 
 ### Notes
