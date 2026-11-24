@@ -1,21 +1,17 @@
-# This GitHub action can publish assets for release when a tag is created.
-# Currently its setup to run on any tag that matches the pattern "v*" (ie. v0.1.0).
+# Terraform Provider release workflow, based on
+# hashicorp/terraform-provider-scaffolding-framework.
 #
-# This uses an action (hashicorp/ghaction-import-gpg) that assumes you set your
-# private key in the `GPG_PRIVATE_KEY` secret and passphrase in the `PASSPHRASE`
-# secret. If you would rather own your own GPG handling, please fork this action
-# or use an alternative one for key handling.
-#
-# You will need to pass the `--batch` flag to `gpg` in your signing step
-# in `goreleaser` to indicate this is being used in a non-interactive mode.
-#
-name: release
+# Runs on tags matching "v*" (e.g. v1.0.0). Requires the GPG_PRIVATE_KEY and
+# PASSPHRASE secrets; GoReleaser signs the checksums file with that key.
+name: Release
+
 on:
   push:
     tags:
       - "v*"
-permissions:
-  contents: write
+
+permissions: {}
+
 jobs:
   release-notes:
     name: "Release Notes"
@@ -23,7 +19,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Extract CHANGELOG.md section for this version
         run: |
           version="${GITHUB_REF_NAME#v}"
@@ -32,18 +30,48 @@ jobs:
             echo "::error file=CHANGELOG.md::No '## ${version}' section found in CHANGELOG.md"
             exit 1
           fi
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-notes
           path: release-notes.txt
           retention-days: 1
-  terraform-provider-release:
-    name: "Terraform Provider Release"
+
+  goreleaser:
     needs: release-notes
-    uses: hashicorp/ghaction-terraform-provider-release/.github/workflows/community.yml@603faab874d76fd9193b5e4c23aaee54f25243f5 # main 2026-08-31: Node 24 actions; no tagged release has them yet
-    secrets:
-      gpg-private-key: "${{ secrets.GPG_PRIVATE_KEY }}"
-      gpg-private-key-passphrase: "${{ secrets.PASSPHRASE }}"
-    with:
-      release-notes: true
-      setup-go-version-file: "go.mod"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub release and upload assets
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # GoReleaser needs the full history and tags.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: "go.mod"
+          # No cache restore in the release job.
+          cache: false
+
+      # Download outside the checkout: GoReleaser refuses to release from a
+      # git tree with untracked files.
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: release-notes
+          path: ${{ runner.temp }}/release-notes
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
+        id: import_gpg
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          args: release --clean --release-notes ${{ runner.temp }}/release-notes/release-notes.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
