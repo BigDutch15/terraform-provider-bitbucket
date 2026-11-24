@@ -1,4 +1,8 @@
-## 2.56.0 (Unreleased)
+## 2.56.0 (November 24, 2026)
+
+### Notes
+
+* Includes the upstream changes released as [DrFaust92/bitbucket v2.55.2](https://github.com/DrFaust92/terraform-provider-bitbucket/releases/tag/v2.55.2), merged in [#24](https://github.com/BigDutch15/terraform-provider-bitbucket/pull/24). Version numbers no longer track upstream: upstream's v2.55.1 and v2.55.2 are different releases from this provider's v2.55.1.
 
 ### Features
 
@@ -11,6 +15,7 @@
 * `bitbucket_group`, `bitbucket_group_membership`, `data.bitbucket_group`, `data.bitbucket_groups`, `data.bitbucket_group_members`: `workspace` now accepts the workspace UUID as well as the slug. A UUID is resolved to the slug before calling the 1.0 groups API, which previously rejected it with HTTP 403 or 405. The docs now use `data.bitbucket_workspace.<name>.slug` ([#14](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/14))
 * `bitbucket_branch_restriction`: `value = 0` is now sent to Bitbucket on create and update instead of being dropped, so restrictions such as `require_commits_behind` with `value = 0` no longer fail with HTTP 400 ([#19](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/19))
   * Create and update errors now use the provider's common `API Error: <status> <endpoint> <message>` format instead of `<status>: <message>`.
+* Provider: each Bitbucket API request now times out after 2 minutes, so an unresponsive endpoint can no longer hang a `plan` or `apply` indefinitely. Requests that are retried get 2 minutes per attempt (from upstream [DrFaust92/terraform-provider-bitbucket#273](https://github.com/DrFaust92/terraform-provider-bitbucket/pull/273))
 
 ## 2.55.1 (November 16, 2026)
 
