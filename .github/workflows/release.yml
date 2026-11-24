@@ -32,7 +32,7 @@ jobs:
             echo "::error file=CHANGELOG.md::No '## ${version}' section found in CHANGELOG.md"
             exit 1
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-notes
           path: release-notes.txt
@@ -40,7 +40,7 @@ jobs:
   terraform-provider-release:
     name: "Terraform Provider Release"
     needs: release-notes
-    uses: hashicorp/ghaction-terraform-provider-release/.github/workflows/community.yml@v5
+    uses: hashicorp/ghaction-terraform-provider-release/.github/workflows/community.yml@603faab874d76fd9193b5e4c23aaee54f25243f5 # main 2026-08-31: Node 24 actions; no tagged release has them yet
     secrets:
       gpg-private-key: "${{ secrets.GPG_PRIVATE_KEY }}"
       gpg-private-key-passphrase: "${{ secrets.PASSPHRASE }}"
