@@ -57,8 +57,13 @@ func resourceGroupMembershipsPut(ctx context.Context, d *schema.ResourceData, m 
 	groupSlug := d.Get("group_slug").(string)
 	uuid := d.Get("uuid").(string)
 
-	_, err := client.PutOnly(fmt.Sprintf("1.0/groups/%s/%s/members/%s",
-		workspace, groupSlug, uuid))
+	workspaceSlug, err := groupsWorkspaceSlug(&client, workspace)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	_, err = client.PutOnly(fmt.Sprintf("1.0/groups/%s/%s/members/%s",
+		workspaceSlug, groupSlug, uuid))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -76,7 +81,12 @@ func resourceGroupMembershipsRead(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	groupsReq, err := client.Get(fmt.Sprintf("1.0/groups/%s/%s/members", workspace, slug))
+	workspaceSlug, err := groupsWorkspaceSlug(&client, workspace)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	groupsReq, err := client.Get(fmt.Sprintf("1.0/groups/%s/%s/members", workspaceSlug, slug))
 
 	if groupsReq != nil && groupsReq.StatusCode == http.StatusNotFound {
 		log.Printf("[WARN] Group Membership (%s) not found, removing from state", d.Id())
@@ -143,8 +153,13 @@ func resourceGroupMembershipsDelete(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
+	workspaceSlug, err := groupsWorkspaceSlug(&client, workspace)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	_, err = client.Delete(fmt.Sprintf("1.0/groups/%s/%s/members/%s",
-		workspace, slug, uuid))
+		workspaceSlug, slug, uuid))
 
 	if err != nil {
 		return diag.FromErr(err)

@@ -6,6 +6,7 @@
 
 ### Bug fixes
 
+* `bitbucket_group`, `bitbucket_group_membership`, `data.bitbucket_group`, `data.bitbucket_groups`, `data.bitbucket_group_members`: `workspace` now accepts the workspace UUID as well as the slug. A UUID is resolved to the slug before calling the 1.0 groups API, which previously rejected it with HTTP 403 or 405. The docs now use `data.bitbucket_workspace.<name>.slug` ([#14](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/14))
 * `bitbucket_branch_restriction`: `value = 0` is now sent to Bitbucket on create and update instead of being dropped, so restrictions such as `require_commits_behind` with `value = 0` no longer fail with HTTP 400 ([#19](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/19))
   * Create and update errors now use the provider's common `API Error: <status> <endpoint> <message>` format instead of `<status>: <message>`.
 
