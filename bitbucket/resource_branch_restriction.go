@@ -22,14 +22,20 @@ import (
 var bitbucketUUIDPattern = regexp.MustCompile(`^\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}$`)
 
 // branchRestrictionRequest is the body sent to create or update a branch
-// restriction. The generated bitbucket.Branchrestriction tags Value with
-// `omitempty`, so a value of 0 (e.g. require_commits_behind = 0) is dropped
-// and Bitbucket rejects the request. The outer Value field shadows the
-// embedded one (encoding/json prefers the shallower field), and as a pointer
-// it is sent whenever it is non-nil, 0 included.
+// restriction, and the shape a read response is decoded into. The generated
+// bitbucket.Branchrestriction tags Value with `omitempty`, so a value of 0
+// (e.g. require_commits_behind = 0) is dropped and Bitbucket rejects the
+// request. The outer Value field shadows the embedded one (encoding/json
+// prefers the shallower field), and as a pointer it is sent whenever it is
+// non-nil, 0 included.
+//
+// PipelinesSourceBranches is missing from the generated model altogether. It
+// is a pointer so that nil leaves it out of the request while a pointer to an
+// empty slice sends [], which clears the list on update.
 type branchRestrictionRequest struct {
 	bitbucket.Branchrestriction
-	Value *int32 `json:"value,omitempty"`
+	Value                   *int32    `json:"value,omitempty"`
+	PipelinesSourceBranches *[]string `json:"pipelines_source_branches,omitempty"`
 }
 
 func resourceBranchRestriction() *schema.Resource {
@@ -78,6 +84,7 @@ func resourceBranchRestriction() *schema.Resource {
 					"require_default_reviewer_approvals_to_merge",
 					"require_no_changes_requested",
 					"require_passing_builds_to_merge",
+					"require_review_group_approvals_to_merge",
 					"require_tasks_to_be_completed",
 					"reset_pullrequest_approvals_on_change",
 					"reset_pullrequest_changes_requested_on_change",
@@ -149,6 +156,11 @@ func resourceBranchRestriction() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
+			"pipelines_source_branches": {
+				Type:     schema.TypeSet,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Optional: true,
+			},
 		},
 	}
 }
@@ -182,7 +194,8 @@ func createBranchRestriction(d *schema.ResourceData) *branchRestrictionRequest {
 			Users:  users,
 			Groups: groups,
 		},
-		Value: branchRestrictionValue(d),
+		Value:                   branchRestrictionValue(d),
+		PipelinesSourceBranches: branchRestrictionPipelinesSourceBranches(d),
 	}
 
 	if v, ok := d.GetOk("pattern"); ok {
@@ -213,6 +226,24 @@ func branchRestrictionValue(d *schema.ResourceData) *int32 {
 	return nil
 }
 
+// branchRestrictionPipelinesSourceBranches returns the source branches to
+// send, or nil to leave them out of the request. They are sent when any are
+// configured, and also as an empty list when the last one was removed, so an
+// update clears them on Bitbucket instead of leaving the old list in place.
+func branchRestrictionPipelinesSourceBranches(d *schema.ResourceData) *[]string {
+	set := d.Get("pipelines_source_branches").(*schema.Set)
+	if set.Len() == 0 && !d.HasChange("pipelines_source_branches") {
+		return nil
+	}
+
+	branches := make([]string, 0, set.Len())
+	for _, item := range set.List() {
+		branches = append(branches, item.(string))
+	}
+
+	return &branches
+}
+
 // branchRestrictionValueConfigured reports whether `value` is set in config.
 // d.GetOk can't tell `value = 0` from an unset value, so this looks at the
 // raw config instead.
@@ -236,9 +267,10 @@ func branchRestrictionsEndpoint(workspace, repo, id string) string {
 	return endpoint
 }
 
-// Create and Update go through the raw HTTP client rather than the generated
-// one, because the generated client serializes bitbucket.Branchrestriction
-// itself and would drop a value of 0 (see branchRestrictionRequest).
+// Create, Read and Update go through the raw HTTP client rather than the
+// generated one, because the generated bitbucket.Branchrestriction drops a
+// value of 0 and has no pipelines_source_branches field (see
+// branchRestrictionRequest).
 func resourceBranchRestrictionsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(Clients).httpClient
 
@@ -266,20 +298,22 @@ func resourceBranchRestrictionsCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceBranchRestrictionsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(Clients).genClient
-	brApi := c.ApiClient.BranchRestrictionsApi
+	client := m.(Clients).httpClient
 
-	brRes, res, err := brApi.RepositoriesWorkspaceRepoSlugBranchRestrictionsIdGet(c.AuthContext, url.PathEscape(d.Id()),
-		d.Get("repository").(string), d.Get("owner").(string))
-
+	res, err := client.Get(branchRestrictionsEndpoint(d.Get("owner").(string), d.Get("repository").(string), d.Id()))
 	if res != nil && res.StatusCode == http.StatusNotFound {
 		log.Printf("[WARN] Branch Restrictions (%s) not found, removing from state", d.Id())
 		d.SetId("")
 		return nil
 	}
-
-	if err := handleClientError(res, err); err != nil {
+	if err != nil {
 		return diag.FromErr(err)
+	}
+	defer res.Body.Close()
+
+	var brRes branchRestrictionRequest
+	if err := json.NewDecoder(res.Body).Decode(&brRes); err != nil {
+		return diag.FromErr(fmt.Errorf("error decoding branch restriction read response: %w", err))
 	}
 
 	var diags diag.Diagnostics
@@ -313,7 +347,18 @@ func resourceBranchRestrictionsRead(ctx context.Context, d *schema.ResourceData,
 	d.SetId(fmt.Sprintf("%v", brRes.Id))
 	d.Set("kind", brRes.Kind)
 	d.Set("pattern", brRes.Pattern)
-	d.Set("value", brRes.Value)
+	var value int32
+	if brRes.Value != nil {
+		value = *brRes.Value
+	}
+	d.Set("value", value)
+	var sourceBranches []string
+	if brRes.PipelinesSourceBranches != nil {
+		sourceBranches = *brRes.PipelinesSourceBranches
+	}
+	if err := d.Set("pipelines_source_branches", sourceBranches); err != nil {
+		return diag.FromErr(fmt.Errorf("error setting pipelines_source_branches: %w", err))
+	}
 	if err := d.Set("users", flattenBranchRestrictionUsers(brRes.Users)); err != nil {
 		return diag.FromErr(fmt.Errorf("error setting users: %w", err))
 	}

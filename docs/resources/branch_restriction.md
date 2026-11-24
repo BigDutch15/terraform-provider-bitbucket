@@ -34,6 +34,18 @@ resource "bitbucket_branch_restriction" "master" {
 }
 ```
 
+Require approvals from review groups before merging. Bitbucket rejects `users`, `groups` and `value` on this kind, so set only the kind and the branches it applies to:
+
+```hcl
+resource "bitbucket_branch_restriction" "review_group" {
+  owner      = "myteam"
+  repository = "terraform-code"
+
+  kind    = "require_review_group_approvals_to_merge"
+  pattern = "main"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -48,6 +60,7 @@ The following arguments are supported:
 * `users` - (Optional) A list of users to use. Accepts Bitbucket account UUIDs (e.g. `{c0ffee00-c0ff-eec0-ffee-c0ffeec0ffee}`) or legacy usernames. **The Bitbucket API no longer returns usernames** (removed as part of Bitbucket's GDPR changes) — a config that still uses a username will produce a **perpetual diff** on every `terraform plan`/`apply` because the API accepts usernames on write but always returns UUIDs on read. When this situation is detected on an existing resource, the provider emits a warning. To migrate: replace the username(s) in your config with the UUID(s) now in state — this triggers a one-time apply, after which the diff disappears permanently. If you cannot migrate immediately, add `lifecycle { ignore_changes = [users] }` to suppress the diff (note: Terraform will then no longer detect user changes on this resource).
 * `groups` - (Optional) A list of groups to use. `owner` identifies the workspace that owns the group — either the workspace slug (e.g. `myteam`) or the workspace UUID (e.g. `{c0ffee00-...}`) are accepted. The Bitbucket API returns both forms for a group; whichever form is already in your Terraform state is preserved on every `Read`, so switching between UUID and slug only happens when you change your config. Newly created groups default to the slug form, matching the example above.
 * `value` - (Optional) A value applied to the restriction kind. Applicable to `require_passing_builds_to_merge`, `require_default_reviewer_approvals_to_merge`, `require_approvals_to_merge` and `require_commits_behind`. `0` is a valid value (for example, `require_commits_behind` with `value = 0` requires the source branch to be fully up to date) and is sent when set explicitly; leave `value` unset to omit it.
+* `pipelines_source_branches` - (Optional) A set of source branch names allowed to push back to the restricted branch. Use it with `kind = "push"`; Bitbucket rejects it on some other kinds (for example, `force` returns HTTP 400). Removing every entry clears the list on Bitbucket.
 
 ## Import
 
