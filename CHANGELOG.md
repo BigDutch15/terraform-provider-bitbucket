@@ -3,6 +3,8 @@
 ### Features
 
 * `bitbucket_branch_restriction`: support the `require_all_comments_resolved` kind ([#5](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/5))
+* `bitbucket_branch_restriction`: support the `require_review_group_approvals_to_merge` kind and the `pipelines_source_branches` argument ([#8](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/8))
+  * Read now uses the provider's raw HTTP client, like create and update, because the generated client has no `pipelines_source_branches` field. Read errors now use the `API Error: <status> <endpoint> <message>` format.
 
 ### Bug fixes
 
