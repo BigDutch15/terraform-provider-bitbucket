@@ -21,18 +21,6 @@ import (
 // bitbucketUUIDPattern matches Bitbucket's canonical curly-brace-wrapped UUID format.
 var bitbucketUUIDPattern = regexp.MustCompile(`^\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}$`)
 
-// BranchRestriction is the data we need to send to create a new branch restriction for the repository
-type BranchRestriction struct {
-	ID              int     `json:"id,omitempty"`
-	Kind            string  `json:"kind,omitempty"`
-	BranchMatchkind string  `json:"branch_match_kind,omitempty"`
-	BranchType      string  `json:"branch_type,omitempty"`
-	Pattern         string  `json:"pattern,omitempty"`
-	Value           int     `json:"value,omitempty"`
-	Users           []User  `json:"users,omitempty"`
-	Groups          []Group `json:"groups,omitempty"`
-}
-
 // branchRestrictionRequest is the body sent to create or update a branch
 // restriction. The generated bitbucket.Branchrestriction tags Value with
 // `omitempty`, so a value of 0 (e.g. require_commits_behind = 0) is dropped
@@ -42,17 +30,6 @@ type BranchRestriction struct {
 type branchRestrictionRequest struct {
 	bitbucket.Branchrestriction
 	Value *int32 `json:"value,omitempty"`
-}
-
-// User is just the user struct we want to use for BranchRestrictions
-type User struct {
-	Username string `json:"username,omitempty"`
-}
-
-// Group is the group we want to add to a branch restriction
-type Group struct {
-	Slug  string `json:"slug,omitempty"`
-	Owner User   `json:"owner,omitempty"`
 }
 
 func resourceBranchRestriction() *schema.Resource {

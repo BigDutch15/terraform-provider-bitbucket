@@ -1,6 +1,7 @@
 package bitbucket
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -483,6 +484,90 @@ func TestBranchRestrictionValue(t *testing.T) {
 				}
 			} else if strings.Contains(string(body), `"value"`) {
 				t.Errorf("body = %s, want no value key", body)
+			}
+		})
+	}
+}
+
+// TestBranchRestrictionValueFromPlan reads the raw config from the plan diff,
+// which is where Create and Update find it at apply time (the gRPC provider
+// sets InstanceDiff.RawConfig), rather than from the state fallback used in
+// TestBranchRestrictionValue.
+func TestBranchRestrictionValueFromPlan(t *testing.T) {
+	cases := []struct {
+		name       string
+		prior      map[string]string
+		configured bool
+		wantValue  *int32
+	}{
+		{
+			name:       "create with explicit zero",
+			configured: true,
+			wantValue:  int32Ptr(0),
+		},
+		{
+			name:       "update from 2 to explicit zero",
+			prior:      map[string]string{"value": "2"},
+			configured: true,
+			wantValue:  int32Ptr(0),
+		},
+		{
+			name: "create with value unset",
+		},
+	}
+
+	sm := schema.InternalMap(resourceBranchRestriction().Schema)
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := map[string]interface{}{
+				"owner":      "myteam",
+				"repository": "my-repo",
+				"kind":       "require_commits_behind",
+				"pattern":    "main",
+			}
+			rawValue := cty.NullVal(cty.Number)
+			if tc.configured {
+				raw["value"] = 0
+				rawValue = cty.NumberIntVal(0)
+			}
+
+			var state *terraform.InstanceState
+			if tc.prior != nil {
+				attrs := map[string]string{
+					"id":                "1",
+					"owner":             "myteam",
+					"repository":        "my-repo",
+					"kind":              "require_commits_behind",
+					"pattern":           "main",
+					"branch_match_kind": "glob",
+				}
+				for k, v := range tc.prior {
+					attrs[k] = v
+				}
+				state = &terraform.InstanceState{ID: "1", Attributes: attrs}
+			}
+
+			diff, err := sm.Diff(context.Background(), state, terraform.NewResourceConfigRaw(raw), nil, nil, true)
+			if err != nil {
+				t.Fatalf("Diff: %v", err)
+			}
+			if diff == nil {
+				diff = &terraform.InstanceDiff{}
+			}
+			diff.RawConfig = cty.ObjectVal(map[string]cty.Value{"value": rawValue})
+
+			d, err := sm.Data(state, diff)
+			if err != nil {
+				t.Fatalf("Data: %v", err)
+			}
+
+			got := createBranchRestriction(d).Value
+			switch {
+			case tc.wantValue == nil && got != nil:
+				t.Fatalf("Value = %d, want nil", *got)
+			case tc.wantValue != nil && (got == nil || *got != *tc.wantValue):
+				t.Fatalf("Value = %v, want %d", got, *tc.wantValue)
 			}
 		})
 	}

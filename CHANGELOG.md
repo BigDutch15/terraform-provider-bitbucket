@@ -3,6 +3,7 @@
 ### Bug fixes
 
 * `bitbucket_branch_restriction`: `value = 0` is now sent to Bitbucket on create and update instead of being dropped, so restrictions such as `require_commits_behind` with `value = 0` no longer fail with HTTP 400 ([#19](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/19))
+  * Create and update errors now use the provider's common `API Error: <status> <endpoint> <message>` format instead of `<status>: <message>`.
 
 ## 2.55.1 (November 16, 2026)
 
