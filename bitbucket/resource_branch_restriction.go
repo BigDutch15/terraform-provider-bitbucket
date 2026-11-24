@@ -1,7 +1,9 @@
 package bitbucket
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -19,27 +21,15 @@ import (
 // bitbucketUUIDPattern matches Bitbucket's canonical curly-brace-wrapped UUID format.
 var bitbucketUUIDPattern = regexp.MustCompile(`^\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}$`)
 
-// BranchRestriction is the data we need to send to create a new branch restriction for the repository
-type BranchRestriction struct {
-	ID              int     `json:"id,omitempty"`
-	Kind            string  `json:"kind,omitempty"`
-	BranchMatchkind string  `json:"branch_match_kind,omitempty"`
-	BranchType      string  `json:"branch_type,omitempty"`
-	Pattern         string  `json:"pattern,omitempty"`
-	Value           int     `json:"value,omitempty"`
-	Users           []User  `json:"users,omitempty"`
-	Groups          []Group `json:"groups,omitempty"`
-}
-
-// User is just the user struct we want to use for BranchRestrictions
-type User struct {
-	Username string `json:"username,omitempty"`
-}
-
-// Group is the group we want to add to a branch restriction
-type Group struct {
-	Slug  string `json:"slug,omitempty"`
-	Owner User   `json:"owner,omitempty"`
+// branchRestrictionRequest is the body sent to create or update a branch
+// restriction. The generated bitbucket.Branchrestriction tags Value with
+// `omitempty`, so a value of 0 (e.g. require_commits_behind = 0) is dropped
+// and Bitbucket rejects the request. The outer Value field shadows the
+// embedded one (encoding/json prefers the shallower field), and as a pointer
+// it is sent whenever it is non-nil, 0 included.
+type branchRestrictionRequest struct {
+	bitbucket.Branchrestriction
+	Value *int32 `json:"value,omitempty"`
 }
 
 func resourceBranchRestriction() *schema.Resource {
@@ -163,7 +153,7 @@ func resourceBranchRestriction() *schema.Resource {
 	}
 }
 
-func createBranchRestriction(d *schema.ResourceData) *bitbucket.Branchrestriction {
+func createBranchRestriction(d *schema.ResourceData) *branchRestrictionRequest {
 
 	users := make([]bitbucket.Account, 0, d.Get("users").(*schema.Set).Len())
 
@@ -186,11 +176,13 @@ func createBranchRestriction(d *schema.ResourceData) *bitbucket.Branchrestrictio
 		groups = append(groups, group)
 	}
 
-	restict := &bitbucket.Branchrestriction{
-		Kind:   d.Get("kind").(string),
-		Value:  int32(d.Get("value").(int)),
-		Users:  users,
-		Groups: groups,
+	restict := &branchRestrictionRequest{
+		Branchrestriction: bitbucket.Branchrestriction{
+			Kind:   d.Get("kind").(string),
+			Users:  users,
+			Groups: groups,
+		},
+		Value: branchRestrictionValue(d),
 	}
 
 	if v, ok := d.GetOk("pattern"); ok {
@@ -208,19 +200,67 @@ func createBranchRestriction(d *schema.ResourceData) *bitbucket.Branchrestrictio
 	return restict
 }
 
-func resourceBranchRestrictionsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(Clients).genClient
-	brApi := c.ApiClient.BranchRestrictionsApi
-	branchRestriction := createBranchRestriction(d)
+// branchRestrictionValue returns the value to send, or nil to leave it out of
+// the request. It is sent when non-zero, and also when it is 0 but set
+// explicitly in config, so `value = 0` reaches Bitbucket while an unset
+// value is still omitted.
+func branchRestrictionValue(d *schema.ResourceData) *int32 {
+	v := int32(d.Get("value").(int))
+	if v != 0 || branchRestrictionValueConfigured(d) {
+		return &v
+	}
 
-	repo := d.Get("repository").(string)
-	workspace := d.Get("owner").(string)
-	branchRestrictionReq, res, err := brApi.RepositoriesWorkspaceRepoSlugBranchRestrictionsPost(c.AuthContext, *branchRestriction, repo, workspace)
-	if err := handleClientError(res, err); err != nil {
+	return nil
+}
+
+// branchRestrictionValueConfigured reports whether `value` is set in config.
+// d.GetOk can't tell `value = 0` from an unset value, so this looks at the
+// raw config instead.
+func branchRestrictionValueConfigured(d *schema.ResourceData) bool {
+	config := d.GetRawConfig()
+	if config.IsNull() || !config.IsKnown() || !config.Type().IsObjectType() || !config.Type().HasAttribute("value") {
+		return false
+	}
+
+	return !config.GetAttr("value").IsNull()
+}
+
+// branchRestrictionsEndpoint returns the raw-client endpoint for a
+// repository's branch restrictions, or for one of them when id is non-empty.
+func branchRestrictionsEndpoint(workspace, repo, id string) string {
+	endpoint := fmt.Sprintf("2.0/repositories/%s/%s/branch-restrictions", workspace, repo)
+	if id != "" {
+		endpoint += "/" + url.PathEscape(id)
+	}
+
+	return endpoint
+}
+
+// Create and Update go through the raw HTTP client rather than the generated
+// one, because the generated client serializes bitbucket.Branchrestriction
+// itself and would drop a value of 0 (see branchRestrictionRequest).
+func resourceBranchRestrictionsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	client := m.(Clients).httpClient
+
+	payload, err := json.Marshal(createBranchRestriction(d))
+	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.SetId(fmt.Sprintf("%v", branchRestrictionReq.Id))
+	repo := d.Get("repository").(string)
+	workspace := d.Get("owner").(string)
+	res, err := client.Post(branchRestrictionsEndpoint(workspace, repo, ""), bytes.NewBuffer(payload))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	defer res.Body.Close()
+
+	var created bitbucket.Branchrestriction
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		return diag.FromErr(fmt.Errorf("error decoding branch restriction create response: %w", err))
+	}
+
+	d.SetId(fmt.Sprintf("%v", created.Id))
 
 	return resourceBranchRestrictionsRead(ctx, d, m)
 }
@@ -287,17 +327,19 @@ func resourceBranchRestrictionsRead(ctx context.Context, d *schema.ResourceData,
 }
 
 func resourceBranchRestrictionsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(Clients).genClient
-	brApi := c.ApiClient.BranchRestrictionsApi
-	branchRestriction := createBranchRestriction(d)
+	client := m.(Clients).httpClient
 
-	_, res, err := brApi.RepositoriesWorkspaceRepoSlugBranchRestrictionsIdPut(c.AuthContext,
-		*branchRestriction, url.PathEscape(d.Id()),
-		d.Get("repository").(string), d.Get("owner").(string))
-
-	if err := handleClientError(res, err); err != nil {
+	payload, err := json.Marshal(createBranchRestriction(d))
+	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	res, err := client.Put(branchRestrictionsEndpoint(d.Get("owner").(string), d.Get("repository").(string), d.Id()),
+		bytes.NewBuffer(payload))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	res.Body.Close()
 
 	return resourceBranchRestrictionsRead(ctx, d, m)
 }
