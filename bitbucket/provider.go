@@ -139,10 +139,12 @@ func Provider() *schema.Provider {
 			"bitbucket_projects":                  dataProjects(),
 			"bitbucket_repository":                dataRepository(),
 			"bitbucket_repositories":              dataRepositories(),
+			"bitbucket_repository_variables":      dataRepositoryVariables(),
 			"bitbucket_user":                      dataUser(),
 			"bitbucket_workspace":                 dataWorkspace(),
 			"bitbucket_workspace_gpg_public_key":  dataWorkspaceGpgPublicKey(),
 			"bitbucket_workspace_members":         dataWorkspaceMembers(),
+			"bitbucket_workspace_variables":       dataWorkspaceVariables(),
 		},
 	}
 }

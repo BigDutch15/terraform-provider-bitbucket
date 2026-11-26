@@ -13,6 +13,7 @@
 * Provider: new `api_url`, `timeout` and `max_retries` arguments (`BITBUCKET_API_URL`, `BITBUCKET_TIMEOUT`, `BITBUCKET_MAX_RETRIES`) (from upstream)
 * **New data source:** `bitbucket_workspace_gpg_public_key`, the system GPG public key(s) Bitbucket uses to sign web commits in a workspace ([#13](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/13))
 * **New data source:** `bitbucket_deploy_keys`, lists the access (deploy) keys of a repository ([#13](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/13))
+* **New data source:** `bitbucket_repository_variables` and `bitbucket_workspace_variables`, the Pipelines variables of a repository or a workspace; secured values are left empty ([#13](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/13))
 
 ### Bug fixes
 
