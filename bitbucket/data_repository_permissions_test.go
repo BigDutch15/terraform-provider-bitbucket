@@ -82,8 +82,9 @@ func TestAccDataSourceRepositoryPermissions_basic(t *testing.T) {
 }
 
 // testAccBitbucketRepositoryPermissionsConfig grants an existing workspace group
-// read access instead of creating a group: workspaces whose groups are managed
-// in Atlassian Admin reject group creation through the 1.0 groups API (HTTP 405).
+// read access instead of creating a group: creating one through the 1.0 groups
+// API needs the account:write OAuth scope, which Atlassian API tokens can't be
+// granted, so it fails with HTTP 405 (DrFaust92/terraform-provider-bitbucket#258).
 func testAccBitbucketRepositoryPermissionsConfig(workspace, rName string) string {
 	return fmt.Sprintf(`
 resource "bitbucket_repository" "test" {
