@@ -77,6 +77,13 @@ $ $GOPATH/bin/terraform-provider-bitbucket
 ...
 ```
 
+To run the same lint checks as CI before each commit, install the [Lefthook](https://github.com/evilmartians/lefthook) git hooks once per clone (config in `lefthook.yml`):
+
+```sh
+brew install lefthook golangci-lint markdownlint-cli
+lefthook install
+```
+
 In order to test the provider, you can simply run `make test`.
 
 ```sh

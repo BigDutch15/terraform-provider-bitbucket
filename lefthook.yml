@@ -1,0 +1,19 @@
+# Local git hooks, mirroring the PR checks in .github/workflows.
+# Setup (once per clone): brew install lefthook markdownlint-cli && lefthook install
+pre-commit:
+  parallel: true
+  jobs:
+    - name: gofmt
+      glob: "*.go"
+      run: gofmt -w {staged_files}
+      stage_fixed: true
+
+    - name: golangci-lint
+      glob: "*.go"
+      run: golangci-lint run --new-from-rev=HEAD ./...
+
+    - name: markdownlint
+      glob:
+        - "docs/*.md"
+        - "docs/**/*.md"
+      run: markdownlint --config .markdownlint.yml {staged_files}
