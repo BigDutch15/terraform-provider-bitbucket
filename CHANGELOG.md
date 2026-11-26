@@ -12,6 +12,7 @@
 
 ### Bug fixes
 
+* `bitbucket_repository_user_permission`, `bitbucket_project_user_permission`: `user_id` now accepts an Atlassian account ID or a legacy username as well as a UUID. Previously a username created the permission and then failed the apply (repository) or forced a replacement on every plan (project). The resource ID now uses the UUID Bitbucket returns, and `user_id` keeps the value from the configuration ([#15](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/15))
 * `bitbucket_branch_restriction`: keep sending `value = 0` on create and update. Upstream's branch restriction code, taken in the sync above, dropped it again, which would bring back the HTTP 400 for restrictions such as `require_commits_behind` with `value = 0` ([#19](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/19))
 
 ## 2.56.0 (November 24, 2026)

@@ -32,7 +32,7 @@ The following arguments are supported:
 
 * `workspace` - (Required) The workspace id.
 * `repo_slug` - (Required) The repository slug.
-* `user_id` - (Required) The UUID of the user.
+* `user_id` - (Required) The user's UUID (preferred, e.g. `{a1b2c3d4-...}`), Atlassian account ID, or legacy username. Whichever form you give is kept in state as written; the resource ID uses the UUID Bitbucket returns. Changing between forms for the same user replaces the resource.
 * `permission` - (Required) Permissions can be one of `read`, `write`, `none`, and `admin`.
 
 ## Import
@@ -42,3 +42,5 @@ Repository User Permissions can be imported using their `workspace:repo-slug:use
 ```sh
 terraform import bitbucket_repository_user_permission.example workspace:repo-slug:user-id
 ```
+
+Use the user's UUID in the import ID. After an import, `user_id` is the UUID, so set `user_id` to the UUID in the configuration to avoid a replacement.
