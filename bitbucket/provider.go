@@ -123,6 +123,7 @@ func Provider() *schema.Provider {
 			"bitbucket_workspace_variable":          resourceWorkspaceVariable(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
+			"bitbucket_branch_restrictions":              dataBranchRestrictions(),
 			"bitbucket_current_user":                     dataCurrentUser(),
 			"bitbucket_deploy_keys":                      dataDeployKeys(),
 			"bitbucket_deployment":                       dataDeployment(),
