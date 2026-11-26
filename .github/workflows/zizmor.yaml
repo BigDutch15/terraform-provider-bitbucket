@@ -1,9 +1,8 @@
 name: zizmor
 
 on:
-  pull_request:
-    paths:
-      - '.github/**'
+  # Pull requests run this via pr-checks.yml, which applies the path filter.
+  workflow_call:
   push:
     branches: [main]
     paths:
