@@ -34,7 +34,7 @@ data "bitbucket_workspace" "test" {
 }
 
 data "bitbucket_groups" "test" {
-  workspace = data.bitbucket_workspace.test.slug
+  workspace = data.bitbucket_workspace.test.id
 }
 `, workspace)
 }

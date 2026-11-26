@@ -41,7 +41,7 @@ data "bitbucket_workspace" "test" {
 }
 
 resource "bitbucket_group" "test" {
-  workspace  = data.bitbucket_workspace.test.slug
+  workspace  = data.bitbucket_workspace.test.id
   name       = %[2]q
 }
 
@@ -54,7 +54,7 @@ resource "bitbucket_group_membership" "test" {
 }
 
 data "bitbucket_group_members" "test" {
-  workspace = data.bitbucket_workspace.test.slug
+  workspace = data.bitbucket_workspace.test.id
   slug      = bitbucket_group_membership.test.group_slug
 }
 `, workspace, rName)

@@ -15,7 +15,7 @@ This allows you to manage your groups.
 * OAuth2 Scopes: `account:write`
 * API token permissions: `read:permission:bitbucket` and `write:permission:bitbucket`
 
-~> **Note:** Groups are managed through the Bitbucket REST 1.0 groups API, which has no 2.0 replacement yet. Atlassian's [v1 API deprecation notice](https://developer.atlassian.com/cloud/bitbucket/deprecation-notice-v1-apis/) keeps these endpoints available until Atlassian platform equivalents exist, with no removal date announced.
+~> **Note:** groups are managed through Bitbucket's legacy 1.0 groups API, which Atlassian has deprecated in favour of [organization-level groups](https://support.atlassian.com/bitbucket-cloud/docs/groups-endpoint/). Creating or changing a group needs the `account:write` OAuth scope, and Atlassian API tokens can't be granted it ([#258](https://github.com/DrFaust92/terraform-provider-bitbucket/issues/258)): use an OAuth consumer with the **Account: Write** permission, or create the group in Atlassian Administration and read it with the `bitbucket_group` data source.
 
 ## Example Usage
 
@@ -36,7 +36,7 @@ resource "bitbucket_group" "test" {
 
 The following arguments are supported:
 
-* `workspace` - (Required) The workspace slug or UUID. A UUID (for example `data.bitbucket_workspace.example.id`) is resolved to the slug, which the 1.0 groups API requires.
+* `workspace` - (Required) The workspace slug or UUID. A UUID, such as the `id` of the `bitbucket_workspace` data source, is resolved to the slug, which the groups API requires.
 * `name` - (Required) The name of the group.
 * `auto_add` - (Optional) Whether to automatically add users the group
 * `permission` - (Optional) One of `read`, `write`, and `admin`.

@@ -1,3 +1,19 @@
+## Unreleased
+
+### Notes
+
+* The provider code is now the same as [DrFaust92/bitbucket v2.57.0](https://github.com/DrFaust92/terraform-provider-bitbucket/releases/tag/v2.57.0). This fork's own implementations of `require_all_comments_resolved`, `require_review_group_approvals_to_merge`, `pipelines_source_branches` and workspace UUID resolution for the group resources are replaced by the upstream versions ([#7](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/7))
+
+### Features
+
+* `enforced_signed_commits` on `bitbucket_repository`, `bitbucket_project` and their data sources; `is_personal`, `is_privacy_enforced`, `forking_mode` and `enforced_signed_commits` on the `bitbucket_workspace` data source; `fingerprint`, `expires_on` and `last_used` on `bitbucket_ssh_key`; `added_on`, `expires_on` and `last_used` on `bitbucket_gpg_key` (from upstream)
+* **New resource:** `bitbucket_pipeline_runner`, a self-hosted Pipelines runner for a workspace or a repository (from upstream)
+* Provider: new `api_url`, `timeout` and `max_retries` arguments (`BITBUCKET_API_URL`, `BITBUCKET_TIMEOUT`, `BITBUCKET_MAX_RETRIES`) (from upstream)
+
+### Bug fixes
+
+* `bitbucket_branch_restriction`: keep sending `value = 0` on create and update. Upstream's branch restriction code, taken in the sync above, dropped it again, which would bring back the HTTP 400 for restrictions such as `require_commits_behind` with `value = 0` ([#19](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/19))
+
 ## 2.56.0 (November 24, 2026)
 
 ### Notes
