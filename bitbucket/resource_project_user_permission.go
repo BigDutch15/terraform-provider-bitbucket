@@ -102,7 +102,17 @@ func resourceProjectUserPermissionPut(ctx context.Context, d *schema.ResourceDat
 	}
 
 	if d.IsNewResource() {
-		d.SetId(fmt.Sprintf("%s:%s:%s", workspace, projectKey, userSlug))
+		returnedUUID := ""
+		if permission.User != nil {
+			returnedUUID = permission.User.UUID
+		}
+		userID, err := permissionUserID(userSlug, returnedUUID)
+		// Set the ID even on error: the permission exists in Bitbucket and
+		// must stay in state so Terraform can delete it.
+		d.SetId(fmt.Sprintf("%s:%s:%s", workspace, projectKey, userID))
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return resourceProjectUserPermissionRead(ctx, d, m)
@@ -149,7 +159,9 @@ func resourceProjectUserPermissionRead(ctx context.Context, d *schema.ResourceDa
 	log.Printf("Project User Permission decoded is: %#v", permission)
 
 	d.Set("permission", permission.Permission)
-	d.Set("user_id", permission.User.UUID)
+	if permission.User != nil {
+		d.Set("user_id", permissionUserIDForState(d.Get("user_id").(string), permission.User.UUID))
+	}
 	d.Set("workspace", workspace)
 	d.Set("project_key", projectKey)
 
