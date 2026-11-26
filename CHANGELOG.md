@@ -16,6 +16,7 @@
 * **New data source:** `bitbucket_repository_variables` and `bitbucket_workspace_variables`, the Pipelines variables of a repository or a workspace; secured values are left empty ([#13](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/13))
 * **New data source:** `bitbucket_workspace_repository_permissions`, the effective repository permissions of every user across a workspace, with an optional `q` filter ([#13](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/13))
 * **New data source:** `bitbucket_branch_restrictions`, lists a repository's branch restrictions, optionally filtered by `kind` and `pattern` ([#13](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/13))
+* **New data source:** `bitbucket_effective_branching_model`, the branching model in effect for a repository after project inheritance ([#13](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/13))
 
 ### Bug fixes
 
