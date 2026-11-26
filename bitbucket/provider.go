@@ -140,6 +140,7 @@ func Provider() *schema.Provider {
 			"bitbucket_project":                          dataProject(),
 			"bitbucket_projects":                         dataProjects(),
 			"bitbucket_repository":                       dataRepository(),
+			"bitbucket_repository_permissions":           dataRepositoryPermissions(),
 			"bitbucket_repositories":                     dataRepositories(),
 			"bitbucket_repository_variables":             dataRepositoryVariables(),
 			"bitbucket_user":                             dataUser(),
