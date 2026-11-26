@@ -128,6 +128,7 @@ func Provider() *schema.Provider {
 			"bitbucket_deploy_keys":                      dataDeployKeys(),
 			"bitbucket_deployment":                       dataDeployment(),
 			"bitbucket_deployments":                      dataDeployments(),
+			"bitbucket_effective_branching_model":        dataEffectiveBranchingModel(),
 			"bitbucket_file":                             dataFile(),
 			"bitbucket_group":                            dataGroup(),
 			"bitbucket_group_members":                    dataGroupMembers(),
