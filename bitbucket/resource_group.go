@@ -71,13 +71,12 @@ func resourceGroupsCreate(ctx context.Context, d *schema.ResourceData, m interfa
 	log.Printf("[DEBUG] Group Request: %#v", group)
 
 	workspace := d.Get("workspace").(string)
-	workspaceSlug, err := groupsWorkspaceSlug(&client, workspace)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
 	body := []byte(fmt.Sprintf("name=%s", group.Name))
-	groupReq, err := client.PostNonJson(fmt.Sprintf("1.0/groups/%s", workspaceSlug), bytes.NewBuffer(body))
+	wsSlug, wsErr := groupsWorkspace(client, workspace)
+	if wsErr != nil {
+		return diag.FromErr(wsErr)
+	}
+	groupReq, err := client.PostNonJson(fmt.Sprintf("1.0/groups/%s", wsSlug), bytes.NewBuffer(body))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -109,12 +108,11 @@ func resourceGroupsRead(ctx context.Context, d *schema.ResourceData, m interface
 		return diag.FromErr(err)
 	}
 
-	workspaceSlug, err := groupsWorkspaceSlug(&client, workspace)
-	if err != nil {
-		return diag.FromErr(err)
+	wsSlug, wsErr := groupsWorkspace(client, workspace)
+	if wsErr != nil {
+		return diag.FromErr(wsErr)
 	}
-
-	groupsReq, err := client.Get(fmt.Sprintf("1.0/groups/%s/%s", workspaceSlug, slug))
+	groupsReq, err := client.Get(fmt.Sprintf("1.0/groups/%s/%s", wsSlug, slug))
 
 	if groupsReq != nil && groupsReq.StatusCode == http.StatusNotFound {
 		log.Printf("[WARN] Group (%s) not found, removing from state", d.Id())
@@ -167,13 +165,12 @@ func resourceGroupsUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	workspaceSlug, err := groupsWorkspaceSlug(&client, d.Get("workspace").(string))
-	if err != nil {
-		return diag.FromErr(err)
+	wsSlug, wsErr := groupsWorkspace(client, d.Get("workspace").(string))
+	if wsErr != nil {
+		return diag.FromErr(wsErr)
 	}
-
 	_, err = client.Put(fmt.Sprintf("1.0/groups/%s/%s/",
-		workspaceSlug, d.Get("slug").(string)), bytes.NewBuffer(bytedata))
+		wsSlug, d.Get("slug").(string)), bytes.NewBuffer(bytedata))
 
 	if err != nil {
 		return diag.FromErr(err)
@@ -190,12 +187,11 @@ func resourceGroupsDelete(ctx context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	workspaceSlug, err := groupsWorkspaceSlug(&client, workspace)
-	if err != nil {
-		return diag.FromErr(err)
+	wsSlug, wsErr := groupsWorkspace(client, workspace)
+	if wsErr != nil {
+		return diag.FromErr(wsErr)
 	}
-
-	_, err = client.Delete(fmt.Sprintf("1.0/groups/%s/%s", workspaceSlug, slug))
+	_, err = client.Delete(fmt.Sprintf("1.0/groups/%s/%s", wsSlug, slug))
 
 	if err != nil {
 		return diag.FromErr(err)

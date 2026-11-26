@@ -61,12 +61,11 @@ func dataReadGroupMembers(ctx context.Context, d *schema.ResourceData, m interfa
 	workspace := d.Get("workspace").(string)
 	slug := d.Get("slug").(string)
 
-	workspaceSlug, err := groupsWorkspaceSlug(&client, workspace)
-	if err != nil {
-		return diag.FromErr(err)
+	wsSlug, wsErr := groupsWorkspace(client, workspace)
+	if wsErr != nil {
+		return diag.FromErr(wsErr)
 	}
-
-	groupsReq, err := client.Get(fmt.Sprintf("1.0/groups/%s/%s/members", workspaceSlug, slug))
+	groupsReq, err := client.Get(fmt.Sprintf("1.0/groups/%s/%s/members", wsSlug, slug))
 
 	if err != nil {
 		return diag.FromErr(err)

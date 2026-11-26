@@ -114,7 +114,7 @@ data "bitbucket_workspace" "test" {
 }
 
 resource "bitbucket_group" "test" {
-  workspace  = data.bitbucket_workspace.test.slug
+  workspace  = data.bitbucket_workspace.test.id
   name       = %[2]q
 }
 
