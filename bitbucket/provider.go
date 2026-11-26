@@ -138,6 +138,7 @@ func Provider() *schema.Provider {
 			"bitbucket_pipeline_oidc_config":             dataPipelineOidcConfig(),
 			"bitbucket_pipeline_oidc_config_keys":        dataPipelineOidcConfigKeys(),
 			"bitbucket_project":                          dataProject(),
+			"bitbucket_project_permissions":              dataProjectPermissions(),
 			"bitbucket_projects":                         dataProjects(),
 			"bitbucket_repository":                       dataRepository(),
 			"bitbucket_repository_permissions":           dataRepositoryPermissions(),

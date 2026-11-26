@@ -18,6 +18,7 @@
 * **New data source:** `bitbucket_branch_restrictions`, lists a repository's branch restrictions, optionally filtered by `kind` and `pattern` ([#13](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/13))
 * **New data source:** `bitbucket_effective_branching_model`, the branching model in effect for a repository after project inheritance ([#13](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/13))
 * **New data source:** `bitbucket_repository_permissions`, the users and groups with explicit permissions on a repository ([#13](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/13))
+* **New data source:** `bitbucket_project_permissions`, the users and groups with explicit permissions on a project ([#13](https://github.com/BigDutch15/terraform-provider-bitbucket/issues/13))
 
 ### Bug fixes
 
