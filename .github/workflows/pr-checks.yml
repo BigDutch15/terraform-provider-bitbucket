@@ -1,0 +1,77 @@
+name: PR Checks
+
+# Runs on every pull request so that the "PR checks gate" job always reports
+# a status. The path filtering that used to live in the documentation and
+# zizmor workflows' triggers happens in the "changes" job instead, and the
+# gate treats a skipped check as passing. Only the gate is a required check.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      docs: ${{ steps.filter.outputs.docs }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The PR merge commit and its first parent (the base branch tip).
+          fetch-depth: 2
+      - name: Filter changed files
+        id: filter
+        run: |
+          changed="$(git diff --name-only HEAD^1 HEAD)"
+          printf 'Changed files:\n%s\n' "$changed"
+
+          match() {
+            if grep -qE "$1" <<<"$changed"; then echo true; else echo false; fi
+          }
+
+          {
+            echo "docs=$(match '^(docs/|\.markdownlinkcheck\.json$|\.markdownlint\.yml$|\.go-version$|\.github/workflows/(documentation|pr-checks)\.yml$)')"
+            echo "workflows=$(match '^\.github/')"
+          } | tee -a "$GITHUB_OUTPUT"
+
+  docs:
+    name: Documentation
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    permissions:
+      contents: read
+    uses: $/.github/workflows/documentation.yml
+
+  zizmor:
+    name: zizmor
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    permissions:
+      contents: read
+    uses: $/.github/workflows/zizmor.yaml
+
+  gate:
+    name: PR checks gate
+    needs: [changes, docs, zizmor]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          DOCS: ${{ needs.docs.result }}
+          ZIZMOR: ${{ needs.zizmor.result }}
+        run: |
+          echo "changes=$CHANGES docs=$DOCS zizmor=$ZIZMOR"
+          # "changes" must succeed; the others may be skipped when their
+          # paths were not touched.
+          [[ "$CHANGES" == success ]] || { echo "::error::changes job: $CHANGES"; exit 1; }
+          for r in "$DOCS" "$ZIZMOR"; do
+            [[ "$r" == success || "$r" == skipped ]] || { echo "::error::a check finished with: $r"; exit 1; }
+          done

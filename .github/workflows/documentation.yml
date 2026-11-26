@@ -3,13 +3,8 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    paths:
-      - .markdownlinkcheck.json
-      - .markdownlint.yml
-      - .github/workflows/documentation.yml
-      - .go-version
-      - docs/**
+  # Pull requests run this via pr-checks.yml, which applies the path filter.
+  workflow_call:
 
 permissions:
   contents: read
