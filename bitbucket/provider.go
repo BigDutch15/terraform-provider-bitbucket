@@ -124,6 +124,7 @@ func Provider() *schema.Provider {
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"bitbucket_current_user":              dataCurrentUser(),
+			"bitbucket_deploy_keys":               dataDeployKeys(),
 			"bitbucket_deployment":                dataDeployment(),
 			"bitbucket_deployments":               dataDeployments(),
 			"bitbucket_file":                      dataFile(),
